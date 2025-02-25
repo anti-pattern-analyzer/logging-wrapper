@@ -6,13 +6,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Service for logging inter-service communication.
- * Logs are first stored in Redis (List) and processed in batches for Kafka.
- */
 @Service
 public class LogService {
 
@@ -20,7 +15,6 @@ public class LogService {
 
     private static final String LOGS_LIST_KEY = "logs:list";
 
-    // Logs older than this are deleted
     private static final long LOG_EXPIRATION_HOURS = 24;
 
     private final StringRedisTemplate redisTemplate;
@@ -29,27 +23,26 @@ public class LogService {
         this.redisTemplate = redisTemplate;
     }
 
-    /**
-     * Logs an inter-service request and stores it in Redis (List).
-     */
-    public void log(String sourceService, String destinationService, String method, String request, String response, boolean success) {
-        String traceId = UUID.randomUUID().toString();
+    public void log(String sourceService, String destinationService, String method, String request,
+                    String response, String traceId, String spanId, String parentSpanId) {
+
         String timestamp = LocalDateTime.now().toString();
 
         String logMessage = String.format(
-                "%s | source=%s, destination=%s, method=%s, trace_id=%s, request=%s, response=%s, success=%b",
-                timestamp, sourceService, destinationService, method, traceId, request, response, success
+                "%s | trace_id=%s, span_id=%s, parent_span_id=%s, source=%s, destination=%s, method=%s, request=%s, response=%s",
+                timestamp, traceId, spanId, parentSpanId, sourceService, destinationService, method, request, response
         );
 
-        saveToRedis(logMessage);
+        saveToRedis(logMessage, traceId, spanId);
     }
 
-    /**
-     * Saves log entry to Redis List with TTL.
-     */
-    private void saveToRedis(String logMessage) {
+    private void saveToRedis(String logMessage, String traceId, String spanId) {
         redisTemplate.opsForList().leftPush(LOGS_LIST_KEY, logMessage);
         redisTemplate.expire(LOGS_LIST_KEY, LOG_EXPIRATION_HOURS, TimeUnit.HOURS);
+
+        redisTemplate.opsForValue().set("trace:" + spanId, traceId, LOG_EXPIRATION_HOURS, TimeUnit.HOURS);
+        redisTemplate.opsForList().leftPush("trace_structure:" + traceId, spanId);
+
         logger.info("Log saved to Redis: {}", logMessage);
     }
 }
