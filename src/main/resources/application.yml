@@ -1,15 +1,4 @@
-# Redis Configuration
 spring:
-  task:
-    execution:
-      pool:
-        core-size: 5
-        max-size: 10
-        queue-capacity: 100
-  data:
-    redis:
-      host: localhost
-      port: 6379
   kafka:
     bootstrap-servers: localhost:29091,localhost:29092
     producer:
@@ -17,13 +6,9 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
       retries: 2147483647
-      batch-size: 16384
-      buffer-memory: 33554432
-      compression-type: gzip
-      linger-ms: 5
+      batch-size: 32768
+      buffer-memory: 67108864
+      compression-type: snappy
+      linger-ms: 10
       enable-idempotence: true
       max-in-flight-requests-per-connection: 5
-  quartz:
-    job-store-type: memory
-    properties:
-      org.quartz.threadPool.threadCount: 5

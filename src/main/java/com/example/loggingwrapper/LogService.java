@@ -2,25 +2,21 @@ package com.example.loggingwrapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class LogService {
 
     private static final Logger logger = LoggerFactory.getLogger(LogService.class);
+    private static final String KAFKA_TOPIC = "logs-topic";
 
-    private static final String LOGS_LIST_KEY = "logs:list";
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    private static final long LOG_EXPIRATION_HOURS = 24;
-
-    private final StringRedisTemplate redisTemplate;
-
-    public LogService(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public LogService(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public void log(String sourceService, String destinationService, String method, String request,
@@ -33,16 +29,13 @@ public class LogService {
                 timestamp, traceId, spanId, parentSpanId, sourceService, destinationService, method, request, response
         );
 
-        saveToRedis(logMessage, traceId, spanId);
-    }
-
-    private void saveToRedis(String logMessage, String traceId, String spanId) {
-        redisTemplate.opsForList().leftPush(LOGS_LIST_KEY, logMessage);
-        redisTemplate.expire(LOGS_LIST_KEY, LOG_EXPIRATION_HOURS, TimeUnit.HOURS);
-
-        redisTemplate.opsForValue().set("trace:" + spanId, traceId, LOG_EXPIRATION_HOURS, TimeUnit.HOURS);
-        redisTemplate.opsForList().leftPush("trace_structure:" + traceId, spanId);
-
-        logger.info("Log saved to Redis: {}", logMessage);
+        kafkaTemplate.send(KAFKA_TOPIC, spanId, logMessage)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        logger.info("Log sent to Kafka: {}", logMessage);
+                    } else {
+                        logger.error("Failed to send log to Kafka: {}", logMessage, ex);
+                    }
+                });
     }
 }
