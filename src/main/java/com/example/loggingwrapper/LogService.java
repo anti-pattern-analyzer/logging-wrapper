@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Service
@@ -22,7 +23,7 @@ public class LogService {
     public void log(String sourceService, String destinationService, String method, String request,
                     String response, String traceId, String spanId, String parentSpanId) {
 
-        String timestamp = LocalDateTime.now().toString();
+        Long timestamp = Instant.now().toEpochMilli();
 
         String logMessage = String.format(
                 "%s | trace_id=%s, span_id=%s, parent_span_id=%s, source=%s, destination=%s, method=%s, request=%s, response=%s",
