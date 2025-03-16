@@ -8,7 +8,7 @@ The logging mechanism ensures real-time log streaming and facilitates centralize
 ## Architecture
 The service follows a producer-consumer model where:
 
-![image](https://github.com/user-attachments/assets/66aac47b-3c04-47af-b4da-22c0d32f4952)
+![image](https://github.com/user-attachments/assets/6074168d-2697-4fb8-a10b-612e1b0945a6)
 
 1. Logger Service captures logs from applications.
 2. Logs are published to a Kafka topic, enabling scalable and fault-tolerant log processing.
