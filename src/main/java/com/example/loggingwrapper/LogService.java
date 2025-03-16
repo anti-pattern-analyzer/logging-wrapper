@@ -20,13 +20,13 @@ public class LogService {
     }
 
     public void log(String sourceService, String destinationService, String method, String type, String request,
-                    String response, String traceId, String spanId, String parentSpanId) {
+                    Integer httpStatus, String response, String traceId, String spanId, String parentSpanId) {
 
         Long timestamp = Instant.now().toEpochMilli();
 
         String logMessage = String.format(
-                "%s | trace_id=%s, span_id=%s, parent_span_id=%s, source=%s, destination=%s, method=%s, type=%s, request=%s, response=%s",
-                timestamp, traceId, spanId, parentSpanId, sourceService, destinationService, method, type, request, response
+                "%s | trace_id=%s, span_id=%s, parent_span_id=%s, source=%s, destination=%s, method=%s, type=%s, request=%s, http_status=%s response=%s",
+                timestamp, traceId, spanId, parentSpanId, sourceService, destinationService, method, type, request, httpStatus, response
         );
 
         kafkaTemplate.send(KAFKA_TOPIC, spanId, logMessage)
